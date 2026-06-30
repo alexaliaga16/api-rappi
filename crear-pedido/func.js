@@ -12,8 +12,10 @@ fdk.handle(async function(input) {
       codigo_pedido_ext: input.codigo_pedido_ext || 'RAPPI-' + Date.now(),
       cliente_nombre: input.cliente_nombre,
       total_pagado: input.total_pagado,
-      items: input.items || [],
-      callback_url: OCI_CALLBACK_URL
+      items: (input.items || []).map(item => ({
+        producto_id: item.producto_id,
+        cantidad: item.cantidad
+      }))
     };
 
     const resultado = await llamarAWS('/dev/pedidos/rappi', 'POST', pedido);
