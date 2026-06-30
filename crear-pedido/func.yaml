@@ -8,6 +8,5 @@ entrypoint: node func.js
 memory: 256
 timeout: 120
 config:
-  AWS_API_GATEWAY_URL: https://TU_URL_AWS.execute-api.us-east-1.amazonaws.com/dev
-  AWS_API_KEY: ""
-  OCI_CALLBACK_URL: https://TU_OCI_URL/actualizar-estado
+  AWS_HOST: ewavegx0bb.execute-api.us-east-1.amazonaws.com
+  AWS_API_KEY: 8PCJrAG4JK8hubjgztwm6fEty4Mt5Uc5LYzI1193

@@ -1,7 +1,7 @@
 {
-	"name": "hellofn",
+	"name": "crear-pedido",
     "version": "1.0.0",
-	"description": "example function",
+	"description": "OCI Function - Recibe pedido de Rappi y lo crea en AWS",
 	"main": "func.js",
 	"author": "",
 	"license": "Apache-2.0",

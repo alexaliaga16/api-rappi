@@ -1,18 +1,33 @@
 const fdk = require('@fnproject/fdk');
 const https = require('https');
 
-const AWS_BASE_URL = 'ewavegx0bb.execute-api.us-east-1.amazonaws.com';
-const AWS_API_KEY = '8PCJrAG4JK8hubjgztwm6fEty4Mt5Uc5LYzI1193';
-const OCI_CALLBACK_URL = 'https://a3v6vivxnusibqxhwkay5kyvve.apigateway.us-chicago-1.oci.customer-oci.com/v1/pedido/estado';
+const AWS_HOST = process.env.AWS_HOST || 'ewavegx0bb.execute-api.us-east-1.amazonaws.com';
+const AWS_API_KEY = process.env.AWS_API_KEY || '8PCJrAG4JK8hubjgztwm6fEty4Mt5Uc5LYzI1193';
 
 fdk.handle(async function(input) {
   try {
+    const { sede, codigo_pedido_ext, cliente_nombre, total_pagado, items } = input;
+
+    if (!sede) {
+      return { success: false, mensaje: 'El campo sede es obligatorio para identificar la sucursal.' };
+    }
+    if (!cliente_nombre || !String(cliente_nombre).trim()) {
+      return { success: false, mensaje: 'El campo cliente_nombre es obligatorio.' };
+    }
+    if (total_pagado === undefined || total_pagado === null) {
+      return { success: false, mensaje: 'El campo total_pagado es obligatorio.' };
+    }
+    if (!Array.isArray(items) || items.length === 0) {
+      return { success: false, mensaje: 'El pedido debe tener al menos un ítem.' };
+    }
+
     const pedido = {
       origen: 'rappi',
-      codigo_pedido_ext: input.codigo_pedido_ext || 'RAPPI-' + Date.now(),
-      cliente_nombre: input.cliente_nombre,
-      total_pagado: input.total_pagado,
-      items: (input.items || []).map(item => ({
+      sede,
+      codigo_pedido_ext: codigo_pedido_ext || 'RAPPI-' + Date.now(),
+      cliente_nombre: String(cliente_nombre).trim(),
+      total_pagado,
+      items: items.map(item => ({
         producto_id: item.producto_id,
         cantidad: item.cantidad
       }))
@@ -24,9 +39,9 @@ fdk.handle(async function(input) {
       success: true,
       mensaje: resultado.mensaje || 'Pedido creado',
       pedido_id_bk: resultado.pedido_id_bk,
+      sede: input.sede,
       estado_actual: resultado.estado_actual,
-      tiempo_estimado_minutos: resultado.tiempo_estimado_minutos,
-      data: resultado
+      tiempo_estimado_minutos: resultado.tiempo_estimado_minutos
     };
 
   } catch (error) {
@@ -43,9 +58,9 @@ function llamarAWS(path, method, body) {
     const data = JSON.stringify(body);
 
     const options = {
-      hostname: AWS_BASE_URL,
-      path: path,
-      method: method,
+      hostname: AWS_HOST,
+      path,
+      method,
       headers: {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(data),
@@ -57,8 +72,13 @@ function llamarAWS(path, method, body) {
       let responseData = '';
       res.on('data', chunk => responseData += chunk);
       res.on('end', () => {
-        try { resolve(JSON.parse(responseData)); }
-        catch { resolve({ raw: responseData }); }
+        let parsed;
+        try { parsed = JSON.parse(responseData); } catch { parsed = { raw: responseData }; }
+
+        if (res.statusCode >= 400) {
+          return reject(new Error(parsed.mensaje || parsed.message || `HTTP ${res.statusCode}`));
+        }
+        resolve(parsed);
       });
     });
 

@@ -1,66 +1,82 @@
 const fdk = require('@fnproject/fdk');
 const https = require('https');
 
-const AWS_BASE_URL = 'ewavegx0bb.execute-api.us-east-1.amazonaws.com';
-const AWS_API_KEY = '8PCJrAG4JK8hubjgztwm6fEty4Mt5Uc5LYzI1193';
-const OCI_CALLBACK_URL = 'https://a3v6vivxnusibqxhwkay5kyvve.apigateway.us-chicago-1.oci.customer-oci.com/v1/pedido/estado';
+// Si todas las sedes comparten el mismo callback de Rappi, se usa este.
+// Si cada sede tiene su propio callback, AWS debe enviarlo en el payload como rappi_callback_url.
+const RAPPI_CALLBACK_URL_DEFAULT = process.env.RAPPI_CALLBACK_URL || '';
 
 fdk.handle(async function(input) {
   try {
-    const pedido = {
-      origen: 'rappi',
-      codigo_pedido_ext: input.codigo_pedido_ext || 'RAPPI-' + Date.now(),
-      cliente_nombre: input.cliente_nombre,
-      total_pagado: input.total_pagado,
-      items: (input.items || []).map(item => ({
-        producto_id: item.producto_id,
-        cantidad: item.cantidad,
-        nombre: item.nombre || ''
-      }))
-    };
+    const codigo_pedido_ext = (input.codigo_pedido_ext || '').trim();
+    const estado_nuevo      = (input.estado_nuevo || '').trim();
+    const pedido_id_bk      = (input.pedido_id_bk || '').trim();
+    const sede              = (input.sede || '').trim();
+    // AWS puede enviar la URL de callback específica de la sede
+    const callbackUrl       = (input.rappi_callback_url || '').trim() || RAPPI_CALLBACK_URL_DEFAULT;
 
-    const resultado = await llamarAWS('/dev/pedidos/rappi', 'POST', pedido);
+    if (!codigo_pedido_ext || !estado_nuevo) {
+      return {
+        success: false,
+        mensaje: 'Campos obligatorios: codigo_pedido_ext, estado_nuevo.'
+      };
+    }
+    if (!sede) {
+      return {
+        success: false,
+        mensaje: 'El campo sede es obligatorio para identificar la sucursal.'
+      };
+    }
+
+    console.log(`[actualizar-estado] sede=${sede} pedido=${codigo_pedido_ext} → ${estado_nuevo}`);
+
+    if (callbackUrl) {
+      await notificarRappi(callbackUrl, {
+        codigo_pedido_ext,
+        pedido_id_bk,
+        sede,
+        estado: estado_nuevo
+      });
+    } else {
+      console.warn('[actualizar-estado] Sin RAPPI_CALLBACK_URL configurada — notificación omitida.');
+    }
 
     return {
       success: true,
-      mensaje: resultado.mensaje || 'Pedido creado',
-      pedido_id_bk: resultado.pedido_id_bk,
-      estado_actual: resultado.estado_actual,
-      tiempo_estimado_minutos: resultado.tiempo_estimado_minutos,
-      data: resultado
+      mensaje: `Estado ${estado_nuevo} procesado correctamente.`,
+      codigo_pedido_ext,
+      pedido_id_bk,
+      sede,
+      estado_nuevo
     };
 
   } catch (error) {
     return {
       success: false,
-      mensaje: 'Error al crear pedido',
+      mensaje: 'Error al actualizar estado',
       error: error.message
     };
   }
 });
 
-function llamarAWS(path, method, body) {
+function notificarRappi(url, body) {
   return new Promise((resolve, reject) => {
+    const parsed = new URL(url);
     const data = JSON.stringify(body);
 
     const options = {
-      hostname: AWS_BASE_URL,
-      path: path,
-      method: method,
+      hostname: parsed.hostname,
+      path: parsed.pathname + (parsed.search || ''),
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(data),
-        'x-api-key': AWS_API_KEY
+        'Content-Length': Buffer.byteLength(data)
       }
     };
 
     const req = https.request(options, (res) => {
       let responseData = '';
       res.on('data', chunk => responseData += chunk);
-      res.on('end', () => {
-        try { resolve(JSON.parse(responseData)); }
-        catch { resolve({ raw: responseData }); }
-      });
+      res.on('end', () => resolve(responseData));
     });
 
     req.on('error', reject);
