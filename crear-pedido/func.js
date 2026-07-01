@@ -2,7 +2,7 @@ const fdk = require('@fnproject/fdk');
 const https = require('https');
 
 const AWS_HOST = process.env.AWS_HOST || 'lmhhjsjxlc.execute-api.us-east-1.amazonaws.com';
-const AWS_API_KEY = process.env.AWS_API_KEY || '8PCJrAG4JK8hubjgztwm6fEty4Mt5Uc5LYzI1193';
+const AWS_API_KEY = process.env.AWS_API_KEY || 'dkOQp3tzBa6cyA3ksIxkQ6O01HG7UDtI9N20rEth';
 
 fdk.handle(async function(input) {
   try {

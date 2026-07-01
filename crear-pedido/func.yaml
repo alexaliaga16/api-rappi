@@ -9,4 +9,4 @@ memory: 256
 timeout: 120
 config:
   AWS_HOST: lmhhjsjxlc.execute-api.us-east-1.amazonaws.com
-  AWS_API_KEY: 8PCJrAG4JK8hubjgztwm6fEty4Mt5Uc5LYzI1193
+  AWS_API_KEY: dkOQp3tzBa6cyA3ksIxkQ6O01HG7UDtI9N20rEth
