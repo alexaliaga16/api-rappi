@@ -8,5 +8,5 @@ entrypoint: node func.js
 memory: 256
 timeout: 120
 config:
-  AWS_HOST: lmhhjsjxlc.execute-api.us-east-1.amazonaws.com
-  AWS_API_KEY: dkOQp3tzBa6cyA3ksIxkQ6O01HG7UDtI9N20rEth
+  AWS_HOST: pkejnq0fse.execute-api.us-east-1.amazonaws.com
+  AWS_API_KEY: DHNaxgIdSk93UTpwr5WNl8P77RYSpCzo2rmfbYMK
